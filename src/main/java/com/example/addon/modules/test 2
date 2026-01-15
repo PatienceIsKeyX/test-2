@@ -1,0 +1,71 @@
+package com.example.addon.modules;
+
+import com.example.addon.Addon;
+import meteordevelopment.meteorclient.events.render.Render3DEvent;
+import meteordevelopment.meteorclient.renderer.ShapeMode;
+import meteordevelopment.meteorclient.settings.*;
+import meteordevelopment.meteorclient.systems.modules.Module;
+import meteordevelopment.meteorclient.utils.render.color.SettingColor;
+import meteordevelopment.orbit.EventHandler;
+import net.minecraft.block.Block;
+import net.minecraft.block.Blocks;
+import net.minecraft.util.math.BlockPos;
+
+import java.util.ArrayList;
+import java.util.List;
+
+public class DiamondHighlighter extends Module {
+    private final SettingGroup sgGeneral = settings.getDefaultGroup();
+
+    // The color of the highlight
+    private final Setting<SettingColor> color = sgGeneral.add(new ColorSetting.Builder()
+            .name("color")
+            .description("The color of the highlight.")
+            .defaultValue(new SettingColor(0, 255, 255, 150)) // Cyan
+            .build()
+    );
+
+    // Range to look for blocks
+    private final Setting<Integer> range = sgGeneral.add(new IntSetting.Builder()
+            .name("range")
+            .description("How far to search for diamonds.")
+            .defaultValue(32)
+            .min(8)
+            .sliderMax(64)
+            .build()
+    );
+
+    private final List<BlockPos> blocks = new ArrayList<>();
+
+    public DiamondHighlighter() {
+        super(Addon.CATEGORY, "diamond-highlighter", "Highlights all Diamond Ore nearby.");
+    }
+
+    @EventHandler
+    private void onRender(Render3DEvent event) {
+        blocks.clear();
+
+        int r = range.get();
+        BlockPos playerPos = mc.player.getBlockPos();
+
+        // Scan the area around the player
+        for (int x = -r; x <= r; x++) {
+            for (int y = -r; y <= r; y++) {
+                for (int z = -r; z <= r; z++) {
+                    BlockPos pos = playerPos.add(x, y, z);
+                    Block block = mc.world.getBlockState(pos).getBlock();
+
+                    // Check for both regular and deepslate diamond ore
+                    if (block == Blocks.DIAMOND_ORE || block == Blocks.DEEPSLATE_DIAMOND_ORE) {
+                        blocks.add(pos);
+                    }
+                }
+            }
+        }
+
+        // Render boxes around the found blocks
+        for (BlockPos pos : blocks) {
+            event.renderer.box(pos, color.get(), color.get(), ShapeMode.Both, 0);
+        }
+    }
+}

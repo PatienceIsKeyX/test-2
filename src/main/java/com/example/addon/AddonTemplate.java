@@ -46,4 +46,12 @@ public class AddonTemplate extends MeteorAddon {
     public GithubRepo getRepo() {
         return new GithubRepo("MeteorDevelopment", "meteor-addon-template");
     }
+@Override
+public void onInitialize() {
+    // ... other code ...
+
+    // Modules
+    Modules.get().add(new AutoMessage());
+    Modules.get().add(new DiamondHighlighter()); // Add this line
+}
 }

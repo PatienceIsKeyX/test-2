@@ -8,26 +8,33 @@ jobs:
   export:
     runs-on: ubuntu-latest
     steps:
-      - name: Install Android SDK pieces
+      - name: Locate installed Android tools
         shell: bash
         run: |
+          set -eux
           SDK=/usr/local/lib/android/sdk
-          MANAGER="$SDK/cmdline-tools/16.0/bin/sdkmanager"
-          test -x "$MANAGER"
-          yes | "$MANAGER" --licenses >/dev/null 2>&1 || true
-          "$MANAGER" "platforms;android-36" "build-tools;36.0.0"
+          ls -la "$SDK/platforms" || true
+          ls -la "$SDK/build-tools" || true
+          PLATFORM="$(find "$SDK/platforms" -mindepth 1 -maxdepth 1 -type d -printf '%f\n' | sort -V | tail -1)"
+          BUILD="$(find "$SDK/build-tools" -mindepth 1 -maxdepth 1 -type d -printf '%f\n' | sort -V | tail -1)"
+          test -n "$PLATFORM"
+          test -n "$BUILD"
+          echo "PLATFORM=$PLATFORM" >> "$GITHUB_ENV"
+          echo "BUILD=$BUILD" >> "$GITHUB_ENV"
       - name: Package tools
         shell: bash
         run: |
           set -eux
           SDK=/usr/local/lib/android/sdk
           mkdir -p export/platforms export/build-tools
-          cp -a "$SDK/platforms/android-36" export/platforms/
-          cp -a "$SDK/build-tools/36.0.0" export/build-tools/
-          tar -C export -czf android-tools-36.tar.gz .
+          cp -a "$SDK/platforms/$PLATFORM" export/platforms/
+          cp -a "$SDK/build-tools/$BUILD" export/build-tools/
+          printf '%s\n' "$PLATFORM" > export/PLATFORM.txt
+          printf '%s\n' "$BUILD" > export/BUILD_TOOLS.txt
+          tar -C export -czf android-tools.tar.gz .
       - name: Upload
         uses: actions/upload-artifact@v4
         with:
-          name: android-tools-36
-          path: android-tools-36.tar.gz
+          name: android-tools
+          path: android-tools.tar.gz
           retention-days: 1

@@ -15,7 +15,7 @@ jobs:
         shell: bash
         run: |
           set -euxo pipefail
-          cat firesand-foundry/src*.b64 | base64 -d > /tmp/foundry.zip
+          cat firesand-foundry/srcv2_*.b64 | base64 -d > /tmp/foundry.zip
           mkdir -p /tmp/foundry
           unzip -q /tmp/foundry.zip -d /tmp/foundry
           cat firesand-foundry/key*.b64 | base64 -d > /tmp/debug.keystore

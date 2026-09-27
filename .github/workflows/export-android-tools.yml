@@ -1,0 +1,29 @@
+name: Export Android Build Tools
+
+on:
+  push:
+    branches: [ firesand-toolchain ]
+
+jobs:
+  export:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Install Android SDK pieces
+        shell: bash
+        run: |
+          yes | sdkmanager --licenses >/dev/null 2>&1 || true
+          sdkmanager "platforms;android-36" "build-tools;36.0.0"
+      - name: Package tools
+        shell: bash
+        run: |
+          set -eux
+          mkdir -p export/platforms export/build-tools
+          cp -a "$ANDROID_HOME/platforms/android-36" export/platforms/
+          cp -a "$ANDROID_HOME/build-tools/36.0.0" export/build-tools/
+          tar -C export -czf android-tools-36.tar.gz .
+      - name: Upload
+        uses: actions/upload-artifact@v4
+        with:
+          name: android-tools-36
+          path: android-tools-36.tar.gz
+          retention-days: 1

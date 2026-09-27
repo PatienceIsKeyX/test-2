@@ -8,6 +8,8 @@ jobs:
   export:
     runs-on: ubuntu-latest
     steps:
+      - name: Set up Android SDK
+        uses: android-actions/setup-android@v3
       - name: Install Android SDK pieces
         shell: bash
         run: |
@@ -17,9 +19,10 @@ jobs:
         shell: bash
         run: |
           set -eux
+          SDK="${ANDROID_HOME:-$ANDROID_SDK_ROOT}"
           mkdir -p export/platforms export/build-tools
-          cp -a "$ANDROID_HOME/platforms/android-36" export/platforms/
-          cp -a "$ANDROID_HOME/build-tools/36.0.0" export/build-tools/
+          cp -a "$SDK/platforms/android-36" export/platforms/
+          cp -a "$SDK/build-tools/36.0.0" export/build-tools/
           tar -C export -czf android-tools-36.tar.gz .
       - name: Upload
         uses: actions/upload-artifact@v4

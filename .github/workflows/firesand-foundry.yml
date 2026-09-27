@@ -1,0 +1,104 @@
+name: Build FireSand Foundry
+
+on:
+  push:
+    branches: [ firesand-foundry-v1 ]
+
+jobs:
+  build:
+    runs-on: ubuntu-latest
+    timeout-minutes: 35
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Reconstruct project and signing key
+        shell: bash
+        run: |
+          set -euxo pipefail
+          cat firesand-foundry/src*.b64 | base64 -d > /tmp/foundry.zip
+          mkdir -p /tmp/foundry
+          unzip -q /tmp/foundry.zip -d /tmp/foundry
+          cat firesand-foundry/key*.b64 | base64 -d > /tmp/debug.keystore
+          mkdir -p "$HOME/.android"
+          cp /tmp/debug.keystore "$HOME/.android/debug.keystore"
+          chmod 600 "$HOME/.android/debug.keystore"
+          test -f /tmp/foundry/FireSand-Foundry/project.godot
+
+      - name: Download Godot 4.7.2
+        shell: bash
+        run: |
+          set -euxo pipefail
+          curl -L --fail --retry 4 --retry-delay 3             -o /tmp/godot.zip             https://github.com/godotengine/godot-builds/releases/download/4.7.2-stable/Godot_v4.7.2-stable_linux.x86_64.zip
+          unzip -q /tmp/godot.zip -d /tmp/godot
+          chmod +x /tmp/godot/Godot_v4.7.2-stable_linux.x86_64
+          /tmp/godot/Godot_v4.7.2-stable_linux.x86_64 --version
+
+      - name: Download Android export templates
+        shell: bash
+        run: |
+          set -euxo pipefail
+          curl -L --fail --retry 4 --retry-delay 3             -o /tmp/templates.tpz             https://github.com/godotengine/godot-builds/releases/download/4.7.2-stable/Godot_v4.7.2-stable_export_templates.tpz
+          mkdir -p /tmp/tpl "$HOME/.local/share/godot/export_templates/4.7.2.stable"
+          unzip -q /tmp/templates.tpz -d /tmp/tpl
+          cp -a /tmp/tpl/templates/. "$HOME/.local/share/godot/export_templates/4.7.2.stable/"
+          ls -lh "$HOME/.local/share/godot/export_templates/4.7.2.stable/" | head
+
+      - name: Check Android SDK
+        shell: bash
+        run: |
+          set -euxo pipefail
+          export ANDROID_HOME=/usr/local/lib/android/sdk
+          export ANDROID_SDK_ROOT="$ANDROID_HOME"
+          ls "$ANDROID_HOME/build-tools"
+          test -x "$(find "$ANDROID_HOME/build-tools" -name apksigner -type f | sort -V | tail -1)"
+
+      - name: Import and parse project
+        shell: bash
+        run: |
+          set -euxo pipefail
+          export ANDROID_HOME=/usr/local/lib/android/sdk
+          export ANDROID_SDK_ROOT="$ANDROID_HOME"
+          GODOT=/tmp/godot/Godot_v4.7.2-stable_linux.x86_64
+          PROJ=/tmp/foundry/FireSand-Foundry
+          "$GODOT" --headless --path "$PROJ" --editor --quit --verbose 2>&1 | tee /tmp/import.log
+          ! grep -E "SCRIPT ERROR|Parse Error" /tmp/import.log
+
+      - name: Runtime smoke test
+        shell: bash
+        run: |
+          set -euxo pipefail
+          GODOT=/tmp/godot/Godot_v4.7.2-stable_linux.x86_64
+          PROJ=/tmp/foundry/FireSand-Foundry
+          timeout 20s "$GODOT" --headless --rendering-method gl_compatibility --path "$PROJ" --quit-after 4 --verbose 2>&1 | tee /tmp/runtime.log || RC=$?
+          if [ "${RC:-0}" -ne 0 ] && [ "${RC:-0}" -ne 124 ]; then exit "${RC}"; fi
+          ! grep -E "SCRIPT ERROR|Parse Error|Invalid call|Invalid access" /tmp/runtime.log
+
+      - name: Export Android APK
+        shell: bash
+        run: |
+          set -euxo pipefail
+          export ANDROID_HOME=/usr/local/lib/android/sdk
+          export ANDROID_SDK_ROOT="$ANDROID_HOME"
+          export PATH="$ANDROID_HOME/platform-tools:$ANDROID_HOME/build-tools/36.0.0:$PATH"
+          GODOT=/tmp/godot/Godot_v4.7.2-stable_linux.x86_64
+          PROJ=/tmp/foundry/FireSand-Foundry
+          mkdir -p "$PROJ/build"
+          "$GODOT" --headless --path "$PROJ" --export-debug Android "$PROJ/build/FireSand-Foundry-v1.0.0.apk" 2>&1 | tee /tmp/export.log
+          test -s "$PROJ/build/FireSand-Foundry-v1.0.0.apk"
+          cp "$PROJ/build/FireSand-Foundry-v1.0.0.apk" "$GITHUB_WORKSPACE/FireSand-Foundry-v1.0.0.apk"
+
+      - name: Verify package and signature
+        shell: bash
+        run: |
+          set -euxo pipefail
+          SDK=/usr/local/lib/android/sdk
+          APKSIGNER="$(find "$SDK/build-tools" -name apksigner -type f | sort -V | tail -1)"
+          "$APKSIGNER" verify --verbose --print-certs FireSand-Foundry-v1.0.0.apk
+          unzip -l FireSand-Foundry-v1.0.0.apk | grep -E 'lib/arm64-v8a|assets/.*\.pck' | head
+          sha256sum FireSand-Foundry-v1.0.0.apk
+
+      - uses: actions/upload-artifact@v4
+        with:
+          name: FireSand-Foundry-v1.0.0
+          path: FireSand-Foundry-v1.0.0.apk
+          retention-days: 2

@@ -8,18 +8,19 @@ jobs:
   export:
     runs-on: ubuntu-latest
     steps:
-      - name: Set up Android SDK
-        uses: android-actions/setup-android@v3
       - name: Install Android SDK pieces
         shell: bash
         run: |
-          yes | sdkmanager --licenses >/dev/null 2>&1 || true
-          sdkmanager "platforms;android-36" "build-tools;36.0.0"
+          SDK=/usr/local/lib/android/sdk
+          MANAGER="$SDK/cmdline-tools/16.0/bin/sdkmanager"
+          test -x "$MANAGER"
+          yes | "$MANAGER" --licenses >/dev/null 2>&1 || true
+          "$MANAGER" "platforms;android-36" "build-tools;36.0.0"
       - name: Package tools
         shell: bash
         run: |
           set -eux
-          SDK="${ANDROID_HOME:-$ANDROID_SDK_ROOT}"
+          SDK=/usr/local/lib/android/sdk
           mkdir -p export/platforms export/build-tools
           cp -a "$SDK/platforms/android-36" export/platforms/
           cp -a "$SDK/build-tools/36.0.0" export/build-tools/

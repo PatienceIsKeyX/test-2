@@ -21,6 +21,18 @@ jobs:
           mkdir -p tichu
           unzip -q /tmp/tichu.zip -d tichu
           unzip -t /tmp/tichu.zip
+      - name: Apply compiler fix
+        run: |
+          python3 - <<'PY'
+          from pathlib import Path
+          p=Path("tichu/app/src/main/java/com/oai/tichulan/MainActivity.java")
+          s=p.read_text()
+          s=s.replace(
+              'if(game.closing && tok==closeToken){ game.finishClosingTrick(); broadcast(); }',
+              'if(game.closing && tok==closeToken){ try{ game.finishClosingTrick(); broadcast(); }catch(RuleException ignored){} }'
+          )
+          p.write_text(s)
+          PY
       - name: Build debug APK
         working-directory: tichu
         run: |

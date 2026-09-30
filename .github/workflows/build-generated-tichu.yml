@@ -48,15 +48,15 @@ jobs:
 
           p=Path("tichu/app/src/main/java/com/oai/tichulan/TichuRules.java")
           s=p.read_text()
-          old='''        for (int start=1; start+n-1<=14; start++) {
-            boolean ok = true;'''
-          new='''        for (int start=1; start+n-1<=14; start++) {
-            // Phoenix may stand for an ordinary 2-Ace, never the Mahjong rank 1.
-            if (start == 1 && !fixed.contains(1)) continue;
-            boolean ok = true;'''
-          if old not in s:
-              raise SystemExit("Phoenix straight patch target missing")
-          s=s.replace(old,new)
+          import re
+          if 'if (start == 1 && !fixed.contains(1)) continue;' not in s:
+              s,n=re.subn(
+                  r'(for \\(int start=1; start\\+n-1<=14; start\\+\\+\\) \\{\\s*)(boolean ok = true;)',
+                  r'\\1// Phoenix may stand for an ordinary 2-Ace, never the Mahjong rank 1.\\n            if (start == 1 && !fixed.contains(1)) continue;\\n            \\2',
+                  s,count=1
+              )
+              if n != 1:
+                  raise SystemExit("Phoenix straight patch target missing")
           p.write_text(s)
           PY
       - name: Build debug APK

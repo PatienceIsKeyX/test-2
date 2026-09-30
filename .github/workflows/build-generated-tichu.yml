@@ -1,0 +1,42 @@
+name: Build generated Tichu APK
+on:
+  pull_request:
+
+jobs:
+  build:
+    runs-on: ubuntu-latest
+    timeout-minutes: 20
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-java@v4
+        with:
+          distribution: temurin
+          java-version: '17'
+      - uses: gradle/actions/setup-gradle@v4
+        with:
+          gradle-version: '8.10.2'
+      - name: Reconstruct source
+        run: |
+          cat tichu_payload/part*.b64 | base64 -d > /tmp/tichu.zip
+          mkdir -p tichu
+          unzip -q /tmp/tichu.zip -d tichu
+          unzip -t /tmp/tichu.zip
+      - name: Build debug APK
+        working-directory: tichu
+        run: |
+          set -o pipefail
+          gradle :app:assembleDebug --stacktrace 2>&1 | tee ../tichu-build.log
+      - name: Upload diagnostics
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: tichu-build-log
+          path: tichu-build.log
+          if-no-files-found: warn
+      - name: Upload APK
+        if: success()
+        uses: actions/upload-artifact@v4
+        with:
+          name: TichuLAN-apk
+          path: tichu/app/build/outputs/apk/debug/app-debug.apk
+          if-no-files-found: error

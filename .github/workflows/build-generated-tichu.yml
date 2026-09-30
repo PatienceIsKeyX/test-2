@@ -21,7 +21,7 @@ jobs:
           mkdir -p tichu
           unzip -q /tmp/tichu.zip -d tichu
           unzip -t /tmp/tichu.zip
-      - name: Apply compiler fix
+      - name: Apply final source fixes
         run: |
           python3 - <<'PY'
           from pathlib import Path
@@ -31,6 +31,32 @@ jobs:
               'if(game.closing && tok==closeToken){ game.finishClosingTrick(); broadcast(); }',
               'if(game.closing && tok==closeToken){ try{ game.finishClosingTrick(); broadcast(); }catch(RuleException ignored){} }'
           )
+          s=s.replace(
+              'if(ids.contains(TichuRules.MAHJONG)){req(wishChoice>=2&&wishChoice<=14,"Choose a Mahjong wish from 2 through Ace");}',
+              'if(ids.contains(TichuRules.MAHJONG)){req(wishChoice==0||(wishChoice>=2&&wishChoice<=14),"Mahjong wish must be no wish or a rank from 2 through Ace");}'
+          )
+          s=s.replace('int wishChoice=2;', 'int wishChoice=0;')
+          s=s.replace(
+              'labels.add("WISH "+Engine.rankName(wishChoice));acts.add("WISH");args.add(0);',
+              'labels.add(wishChoice==0?"NO WISH":"WISH "+Engine.rankName(wishChoice));acts.add("WISH");args.add(0);'
+          )
+          s=s.replace(
+              'if("WISH".equals(b.action)){wishChoice++;if(wishChoice>14)wishChoice=2;invalidate();return;}',
+              'if("WISH".equals(b.action)){if(wishChoice==0)wishChoice=2;else if(wishChoice>=14)wishChoice=0;else wishChoice++;invalidate();return;}'
+          )
+          p.write_text(s)
+
+          p=Path("tichu/app/src/main/java/com/oai/tichulan/TichuRules.java")
+          s=p.read_text()
+          old='''        for (int start=1; start+n-1<=14; start++) {
+            boolean ok = true;'''
+          new='''        for (int start=1; start+n-1<=14; start++) {
+            // Phoenix may stand for an ordinary 2-Ace, never the Mahjong rank 1.
+            if (start == 1 && !fixed.contains(1)) continue;
+            boolean ok = true;'''
+          if old not in s:
+              raise SystemExit("Phoenix straight patch target missing")
+          s=s.replace(old,new)
           p.write_text(s)
           PY
       - name: Build debug APK

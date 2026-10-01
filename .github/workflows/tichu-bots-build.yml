@@ -1,0 +1,54 @@
+name: Build Tichu Bots APK
+on:
+  push:
+    branches:
+      - tichu-bots-build-20261001
+  workflow_dispatch:
+
+jobs:
+  build:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Reconstruct verified source
+        shell: bash
+        run: |
+          cat tichu_bot_payload/part*.b64 | tr -d '\n\r' | base64 -d > /tmp/TichuBots-source.zip
+          echo "59864d74e89a6e907aac64524d449c74fc89b7b8d92e18877c9fe9ce1b475ede  /tmp/TichuBots-source.zip" | sha256sum -c -
+          mkdir -p /tmp/tichu
+          unzip -q /tmp/TichuBots-source.zip -d /tmp/tichu
+
+      - uses: actions/setup-java@v4
+        with:
+          distribution: temurin
+          java-version: '17'
+
+      - uses: android-actions/setup-android@v3
+
+      - name: Install Android SDK
+        shell: bash
+        run: |
+          yes | sdkmanager --licenses >/dev/null || true
+          sdkmanager "platforms;android-35" "build-tools;35.0.0"
+
+      - uses: gradle/actions/setup-gradle@v4
+        with:
+          gradle-version: '8.10.2'
+
+      - name: Build APK
+        working-directory: /tmp/tichu
+        run: gradle :app:assembleDebug --stacktrace
+
+      - name: Verify APK
+        shell: bash
+        run: |
+          test -f /tmp/tichu/app/build/outputs/apk/debug/app-debug.apk
+          $ANDROID_HOME/build-tools/35.0.0/apksigner verify --verbose /tmp/tichu/app/build/outputs/apk/debug/app-debug.apk
+          sha256sum /tmp/tichu/app/build/outputs/apk/debug/app-debug.apk
+
+      - uses: actions/upload-artifact@v4
+        with:
+          name: TichuBots-1.1-apk
+          path: /tmp/tichu/app/build/outputs/apk/debug/app-debug.apk
+          if-no-files-found: error

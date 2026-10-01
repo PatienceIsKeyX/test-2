@@ -23,7 +23,7 @@ jobs:
       - name: Apply 1.4 premium table and card redesign
         shell: bash
         run: |
-          cat tichu14_patch/part*.b64 | tr -d '\n\r' | base64 -d | gzip -dc > /tmp/tichu14.patch
+          cat tichu14_patch/part00.b64 tichu14_patch/part01.b64 tichu14_patch/part02.b64 tichu14_patch/part03_0.b64 tichu14_patch/part03_1.b64 tichu14_patch/part03_2.b64 tichu14_patch/part03_3.b64 tichu14_patch/part04.b64 | tr -d '\n\r' | base64 -d | gzip -dc > /tmp/tichu14.patch
           echo "43a66dc077dc25581ec6c71ddc8597ac140ff162ed13e4360464f563722a4e76  /tmp/tichu14.patch" | sha256sum -c -
           cd /tmp/tichu14
           patch -p0 < /tmp/tichu14.patch

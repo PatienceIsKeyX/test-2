@@ -27,6 +27,7 @@ jobs:
           echo "868f438d20ab49e8186ae9469a5358ec27ba4283872752d7d2848f45ba60b81e  /tmp/tichu15.patch" | sha256sum -c -
           cd /tmp/tichu15
           patch -p0 < /tmp/tichu15.patch
+          sed -i 's/0x332ffffff/0x33ffffff/' app/src/main/java/com/oai/tichulan/MainActivity.java
           grep -q "void drawSuitIcon" app/src/main/java/com/oai/tichulan/MainActivity.java
           grep -q "void drawSpecialCard" app/src/main/java/com/oai/tichulan/MainActivity.java
           grep -q "versionName '1.5.0'" app/build.gradle

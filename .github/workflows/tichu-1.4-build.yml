@@ -1,0 +1,70 @@
+name: Build Tichu 1.4 APK
+on:
+  push:
+    branches:
+      - tichu-ui-1.4-20261001
+  workflow_dispatch:
+
+jobs:
+  build:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Reconstruct verified 1.2 source
+        shell: bash
+        run: |
+          cat tichu12_payload/part00_0.b64 tichu12_payload/part00_1.b64 tichu12_payload/part00_2.b64 tichu12_payload/part00_3a.b64 tichu12_payload/part00_3b0a.b64 tichu12_payload/part00_3b0b.b64 tichu12_payload/part00_3b1.b64 tichu12_payload/part01.b64 tichu12_payload/part02.b64 tichu12_payload/part03.b64 | tr -d '\n\r' | base64 -d > /tmp/Tichu-1.2-source.zip
+          echo "f338bd3f3c981e9f67e81273f3d38b1062de4c97a536c0eb094535ccafef9183  /tmp/Tichu-1.2-source.zip" | sha256sum -c -
+          rm -rf /tmp/tichu14
+          mkdir -p /tmp/tichu14
+          unzip -q /tmp/Tichu-1.2-source.zip -d /tmp/tichu14
+
+      - name: Apply 1.4 premium table and card redesign
+        shell: bash
+        run: |
+          cat tichu14_patch/part*.b64 | tr -d '\n\r' | base64 -d | gzip -dc > /tmp/tichu14.patch
+          echo "43a66dc077dc25581ec6c71ddc8597ac140ff162ed13e4360464f563722a4e76  /tmp/tichu14.patch" | sha256sum -c -
+          cd /tmp/tichu14
+          patch -p0 < /tmp/tichu14.patch
+          grep -q "void drawSuitIcon" app/src/main/java/com/oai/tichulan/MainActivity.java
+          grep -q "void drawSpecialCard" app/src/main/java/com/oai/tichulan/MainActivity.java
+          grep -q "versionName '1.4.0'" app/build.gradle
+
+      - uses: actions/setup-java@v4
+        with:
+          distribution: temurin
+          java-version: '17'
+
+      - uses: android-actions/setup-android@v3
+        with:
+          packages: ''
+
+      - name: Install Android SDK
+        shell: bash
+        run: |
+          yes | sdkmanager --licenses >/dev/null || true
+          sdkmanager "platforms;android-35" "build-tools;35.0.0"
+
+      - uses: gradle/actions/setup-gradle@v4
+        with:
+          gradle-version: '8.10.2'
+
+      - name: Build APK
+        working-directory: /tmp/tichu14
+        run: gradle :app:assembleDebug --stacktrace
+
+      - name: Verify APK
+        shell: bash
+        run: |
+          APK=/tmp/tichu14/app/build/outputs/apk/debug/app-debug.apk
+          test -f "$APK"
+          $ANDROID_HOME/build-tools/35.0.0/apksigner verify --verbose "$APK"
+          $ANDROID_HOME/build-tools/35.0.0/aapt dump badging "$APK" | head -3
+          sha256sum "$APK"
+
+      - uses: actions/upload-artifact@v4
+        with:
+          name: Tichu-1.4-apk
+          path: /tmp/tichu14/app/build/outputs/apk/debug/app-debug.apk
+          if-no-files-found: error

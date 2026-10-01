@@ -24,13 +24,15 @@ jobs:
           distribution: temurin
           java-version: '17'
 
-      - uses: android-actions/setup-android@v3
-
       - name: Install Android SDK
         shell: bash
+        env:
+          ANDROID_HOME: /usr/local/lib/android/sdk
+          ANDROID_SDK_ROOT: /usr/local/lib/android/sdk
         run: |
-          yes | sdkmanager --licenses >/dev/null || true
-          sdkmanager "platforms;android-35" "build-tools;35.0.0"
+          SDKMANAGER=/usr/local/lib/android/sdk/cmdline-tools/16.0/bin/sdkmanager
+          yes | "$SDKMANAGER" --licenses >/dev/null || true
+          "$SDKMANAGER" "platforms;android-35" "build-tools;35.0.0"
 
       - uses: gradle/actions/setup-gradle@v4
         with:
@@ -38,13 +40,16 @@ jobs:
 
       - name: Build APK
         working-directory: /tmp/tichu
+        env:
+          ANDROID_HOME: /usr/local/lib/android/sdk
+          ANDROID_SDK_ROOT: /usr/local/lib/android/sdk
         run: gradle :app:assembleDebug --stacktrace
 
       - name: Verify APK
         shell: bash
         run: |
           test -f /tmp/tichu/app/build/outputs/apk/debug/app-debug.apk
-          $ANDROID_HOME/build-tools/35.0.0/apksigner verify --verbose /tmp/tichu/app/build/outputs/apk/debug/app-debug.apk
+          /usr/local/lib/android/sdk/build-tools/35.0.0/apksigner verify --verbose /tmp/tichu/app/build/outputs/apk/debug/app-debug.apk
           sha256sum /tmp/tichu/app/build/outputs/apk/debug/app-debug.apk
 
       - uses: actions/upload-artifact@v4

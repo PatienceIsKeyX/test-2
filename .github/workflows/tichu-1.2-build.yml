@@ -14,7 +14,7 @@ jobs:
       - name: Reconstruct verified source
         shell: bash
         run: |
-          cat tichu12_payload/part00.b64 tichu12_payload/part01.b64 tichu12_payload/part02.b64 tichu12_payload/part03.b64 | tr -d '\n\r' | base64 -d > /tmp/Tichu-1.2-source.zip
+          cat tichu12_payload/part00_0.b64 tichu12_payload/part00_1.b64 tichu12_payload/part00_2.b64 tichu12_payload/part00_3a.b64 tichu12_payload/part00_3b0a.b64 tichu12_payload/part00_3b0b.b64 tichu12_payload/part00_3b1.b64 tichu12_payload/part01.b64 tichu12_payload/part02.b64 tichu12_payload/part03.b64 | tr -d '\n\r' | base64 -d > /tmp/Tichu-1.2-source.zip
           echo "f338bd3f3c981e9f67e81273f3d38b1062de4c97a536c0eb094535ccafef9183  /tmp/Tichu-1.2-source.zip" | sha256sum -c -
           rm -rf /tmp/tichu12
           mkdir -p /tmp/tichu12

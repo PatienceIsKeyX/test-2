@@ -14,7 +14,7 @@ jobs:
       - name: Reconstruct verified source
         shell: bash
         run: |
-          cat tichu_bot_payload/part*.b64 | tr -d '\n\r' | base64 -d > /tmp/TichuBots-source.zip
+          cat tichu_bot_payload/part00.b64 tichu_bot_payload/part01.b64 tichu_bot_payload/part02.b64 tichu_bot_payload/part03.b64 tichu_bot_payload/part04_0.b64 tichu_bot_payload/part04_1.b64 tichu_bot_payload/part04_2.b64 tichu_bot_payload/part04_3.b64 tichu_bot_payload/part05.b64 | tr -d '\n\r' | base64 -d > /tmp/TichuBots-source.zip
           echo "59864d74e89a6e907aac64524d449c74fc89b7b8d92e18877c9fe9ce1b475ede  /tmp/TichuBots-source.zip" | sha256sum -c -
           mkdir -p /tmp/tichu
           unzip -q /tmp/TichuBots-source.zip -d /tmp/tichu
